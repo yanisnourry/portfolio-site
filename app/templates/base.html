@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="{% block lang %}en{% endblock %}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% set page_title %}{% block title %}Yanis Nourry — Backend Python & DevOps{% endblock %}{% endset %}
+  {% set page_description %}{% block description %}Backend Python developer and DevOps. A market data pipeline, a backtesting engine with a live demo, and the self-hosted Kubernetes cluster they run on.{% endblock %}{% endset %}
+  <title>{{ page_title }}</title>
+  <meta name="description" content="{{ page_description }}">
+  <link rel="canonical" href="{{ settings.site_url }}{{ page_path }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Yanis Nourry">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ page_description }}">
+  <meta property="og:url" content="{{ settings.site_url }}{{ page_path }}">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="{{ url_for('static', path='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/site.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">yn<span class="brand-dot">.</span>tech</a>
+      <nav aria-label="Main">
+        <a href="/#projects">Projects</a>
+        <a href="/#services">Services</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© 2026 Yanis Nourry</span>
+      <a href="https://github.com/yanisnourry/portfolio-site">Source of this site</a>
+      <a href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a>
+    </div>
+  </footer>
+</body>
+</html>
