@@ -2,27 +2,46 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.backtester_client import fetch_results
-from app.charts import sparkline_points
+from app.charts import equity_chart
 from app.config import Settings
-from app.formatting import num, pct, utc
+from app.formatting import day, num, pct, utc
 
 BASE_DIR = Path(__file__).resolve().parent
 
 settings = Settings.from_env()
+
+# (label, href): pages get their own entry as they are written.
+NAV = [
+    ("Projects", "/#projects"),
+    ("Backtester", "/backtester"),
+    ("Contact", "/#contact"),
+]
 
 # A public site, not an API: no /docs, /redoc or /openapi.json.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
-templates.env.filters.update(pct=pct, num=num, utc=utc)
-templates.env.globals.update(settings=settings)
+templates.env.filters.update(pct=pct, num=num, utc=utc, day=day)
+templates.env.globals.update(settings=settings, nav=NAV)
+
+
+def render(request: Request, template: str, page_path: str, **context: Any):
+    return templates.TemplateResponse(
+        request, template, {"page_path": page_path, **context}
+    )
+
+
+async def backtest_context() -> dict[str, Any]:
+    backtest = await fetch_results(settings)
+    return {"backtest": backtest, "chart": equity_chart(backtest.results["equity"])}
 
 
 @app.get("/healthz")
@@ -33,13 +52,9 @@ async def healthz():
 
 @app.get("/")
 async def home(request: Request):
-    backtest = await fetch_results(settings)
-    return templates.TemplateResponse(
-        request,
-        "home.html",
-        {
-            "page_path": "/",
-            "backtest": backtest,
-            "sparkline": sparkline_points(backtest.results["equity"]),
-        },
-    )
+    return render(request, "home.html", "/", **await backtest_context())
+
+
+@app.get("/backtester")
+async def backtester(request: Request):
+    return render(request, "backtester.html", "/backtester", **await backtest_context())

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Vectorized Backtester: live demo and engine design · Yanis Nourry{% endblock %}
+{% block description %}A vectorized backtesting engine built to measure a strategy honestly: no look-ahead, transaction costs included, correct annualization. Re-run every hour on live market data, as an engineering demo.{% endblock %}
+
+{% block content %}
+<section class="hero wrap">
+  <p class="eyebrow">Python · pandas · FastAPI</p>
+  <h1>Vectorized Backtester</h1>
+  <p class="lede">
+    An evaluation engine, not an alpha search. It replays a strategy over
+    historical candles and reports what would have happened, honestly: no
+    look-ahead, transaction costs on by default, metrics annualized for the
+    bar size. A small service re-runs it every hour on fresh data from my
+    market data pipeline.
+  </p>
+  <p class="links">
+    <a href="https://github.com/yanisnourry/vectorized-backtester">Engine source ↗</a>
+    <a href="https://github.com/yanisnourry/backtester-service">Service source ↗</a>
+  </p>
+</section>
+
+<section class="wrap section" id="live">
+  <h2>Live backtest</h2>
+  <div class="callout">
+    <strong>Simulation, not a trading signal.</strong>
+    This is a plain SMA crossover used to exercise the engine end to end on
+    real, refreshed data. It is not a recommendation, a forecast, or a record of
+    real performance. The strategy is not meant to make money, and the page
+    shows whatever it does.
+  </div>
+
+  {% with full = true %}{% include "_backtest_live.html" %}{% endwith %}
+
+  <p>
+    Every hour, the service pulls the last 30 days of <span class="mono">BTCUSDT</span>
+    1h candles from the pipeline's REST API, runs the engine, and keeps the result
+    in memory. This page asks it for the result on each request, <em>server-side</em>:
+    the service has no public address and is only reachable from inside the
+    cluster. If it doesn't answer within two seconds, you get a labelled static
+    example instead of an error.
+  </p>
+</section>
+
+<section class="wrap section">
+  <h2>One demo strategy, on purpose</h2>
+  <p>
+    The only strategy is an SMA crossover: long while the 10-bar average is above
+    the 30-bar one, short while it is below, flat until both averages exist. There
+    is no parameter search and no optimisation. The crossover is a test vehicle:
+    simple enough that any oddity in the results points at the engine, not the
+    strategy. The value is in the measurement.
+  </p>
+</section>
+
+<section class="wrap section">
+  <h2>How the engine stays honest</h2>
+
+  <ol class="steps mono" aria-label="Engine pipeline">
+    <li><span>DataLoader</span><small>source</small></li>
+    <li><span>Signal</span><small>-1 / 0 / +1</small></li>
+    <li><span>Position</span><small>shift(1)</small></li>
+    <li><span>Returns</span><small>pct_change</small></li>
+    <li><span>Costs</span><small>bps</small></li>
+    <li><span>Equity</span><small>cumprod</small></li>
+    <li><span>Metrics</span><small>Sharpe, drawdown…</small></li>
+  </ol>
+
+  <div class="grid grid-2">
+    <div class="service">
+      <h3>No look-ahead</h3>
+      <p>
+        The position held through bar <em>t</em> is the signal decided at the
+        close of <em>t−1</em>: <code>position = signal.shift(1)</code>. It happens
+        in exactly one place, so the guarantee can be audited, and a test
+        truncates the input mid-series to check that no past value changes.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Costs on by default</h3>
+      <p>
+        Every change of position pays 10 bps of fees and 5 bps of slippage per
+        unit traded. Holding is free, an entry pays once, a long↔short flip pays
+        twice. These rates are conservative placeholders, not calibrated to a
+        venue.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Correct annualization</h3>
+      <p>
+        A mean scales with time, a standard deviation with its square root, and
+        both depend on the bar size. The number of bars per year is always passed
+        in by the caller (8,760 for hourly bars), never a hard-coded 252.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Bad data fails loudly</h3>
+      <p>
+        The data loader refuses a series with a missing candle instead of
+        forward-filling it: a silently patched gap would distort every return
+        after it. A hole in the data means a failed refresh, not a wrong curve.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2>Tests that can't agree with a bug</h2>
+  <p>
+    The engine has 65 tests, including a dedicated suite that checks its honesty
+    claims end to end, each written so that it can't pass by re-running the code
+    it tests:
+  </p>
+  <ul class="plain">
+    <li>An always-long strategy with zero costs must match buy-and-hold <em>exactly</em>. The reference is <code>close / close[0]</code>, computed independently of the engine.</li>
+    <li>A flat signal must give a flat equity curve, on prices that do move and with costs on.</li>
+    <li>Truncating the input must leave every earlier position, cost and equity value bit-for-bit identical.</li>
+  </ul>
+  <p>The service adds 21 tests of its own, with the pipeline mocked. Both repositories run their tests in CI on every push.</p>
+</section>
+
+<section class="wrap section">
+  <h2>Service design</h2>
+  <ul class="plain">
+    <li><strong>Stateless, nothing to leak.</strong> The latest result lives in memory: no database, no credentials. A restart just recomputes it.</li>
+    <li><strong>Two read-only routes, internal only.</strong> <code>/results</code> and <code>/health</code>, behind a <code>ClusterIP</code> Service. FastAPI's <code>/docs</code> is disabled.</li>
+    <li><strong>No current position exposed.</strong> The result carries metrics and the equity curve, never the position held now: that is the one field someone could take for a live signal.</li>
+    <li><strong>Failures degrade, never crash.</strong> A failed refresh keeps the previous result and marks it stale after two missed hours. The health check stays green, so a pipeline outage doesn't send the pod into a restart loop.</li>
+    <li><strong>The engine is a dependency, not a copy.</strong> The service installs it from GitHub, pinned by commit sha.</li>
+  </ul>
+</section>
+
+<section class="wrap section">
+  <h2>Known limitations</h2>
+  <ul class="plain">
+    <li>A single demo strategy and a single market (<span class="mono">BTCUSDT</span>, 1h).</li>
+    <li>A gap in the pipeline's data inside the 30-day window blocks refreshes until the pipeline backfills it; the result shows as delayed meanwhile.</li>
+    <li>Single replica by design: the state is in memory, so two replicas would serve two different results.</li>
+    <li>No history of past runs: the page only shows the latest one.</li>
+  </ul>
+</section>
+{% endblock %}

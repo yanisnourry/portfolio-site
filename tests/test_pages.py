@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 import app.main as main
 from app.backtester_client import BacktestView, load_fallback
-from app.charts import sparkline_points
+from app.charts import equity_chart
 
 client = TestClient(main.app)
 
@@ -101,10 +101,46 @@ def test_static_assets():
     assert client.get("/static/favicon.svg").status_code == 200
 
 
-def test_sparkline_scales_to_viewbox():
-    points = sparkline_points([{"equity": 1.0}, {"equity": 2.0}, {"equity": 1.5}], 100, 50, pad=0)
-    assert points == "0.0,50.0 50.0,0.0 100.0,25.0"
+def test_backtester_page_live(backtest):
+    resp = client.get("/backtester")
+    assert resp.status_code == 200
+    html = resp.text
+    assert "Simulation, not a trading signal." in html
+    assert "Computed 2026-09-30 10:00 UTC" in html
+    assert "Profit factor" in html
+    assert 'class="baseline"' in html
+    assert 'href="/backtester" aria-current="page"' in html
 
 
-def test_sparkline_needs_two_points():
-    assert sparkline_points([{"equity": 1.0}]) == ""
+def test_backtester_page_degraded(backtest):
+    backtest.view = BacktestView(live=False, results=load_fallback())
+    resp = client.get("/backtester")
+    assert resp.status_code == 200
+    assert "Live service temporarily unavailable" in resp.text
+
+
+def test_backtester_page_never_leaks_internal_url(backtest):
+    assert "svc.cluster.local" not in client.get("/backtester").text
+
+
+def test_no_season_naming(backtest):
+    """Internal roadmap vocabulary never reaches public pages."""
+    for path in ("/", "/backtester"):
+        html = client.get(path).text.lower()
+        assert "season" not in html and "saison" not in html
+
+
+def test_equity_chart_scales_to_viewbox():
+    chart = equity_chart([{"equity": 1.0}, {"equity": 2.0}, {"equity": 1.5}], 100, 50, pad=0)
+    assert chart.points == "0.0,50.0 50.0,0.0 100.0,25.0"
+    assert (chart.lo, chart.hi) == (1.0, 2.0)
+    assert chart.baseline_y == 50.0
+
+
+def test_equity_chart_baseline_out_of_range():
+    chart = equity_chart([{"equity": 1.1}, {"equity": 1.2}])
+    assert chart.baseline_y is None
+
+
+def test_equity_chart_needs_two_points():
+    assert equity_chart([{"equity": 1.0}]).points == ""
