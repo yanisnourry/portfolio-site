@@ -153,9 +153,30 @@ def test_infrastructure_page_never_claims_dnssec():
     assert "dnssec" not in client.get("/infrastructure").text.lower()
 
 
+def test_legal_page_in_french_with_lcen_fields():
+    resp = client.get("/mentions-legales")
+    assert resp.status_code == 200
+    html = resp.text
+    assert '<html lang="fr">' in html
+    for required in ("Yanis Nourry", "78800 Houilles", "06 48 67 14 06",
+                     "Directeur de la publication", "auto-hébergé", "Cloudflare, Inc."):
+        assert required in html
+    assert "À COMPLÉTER" not in html.upper()
+
+
+def test_other_pages_stay_in_english(backtest):
+    for path in ("/", "/pipeline", "/backtester", "/infrastructure"):
+        assert '<html lang="en">' in client.get(path).text
+
+
+def test_footer_links_legal_page_everywhere(backtest):
+    for path in ("/", "/pipeline", "/backtester", "/infrastructure", "/mentions-legales"):
+        assert 'href="/mentions-legales"' in client.get(path).text
+
+
 def test_no_season_naming(backtest):
     """Internal roadmap vocabulary never reaches public pages."""
-    for path in ("/", "/backtester", "/pipeline", "/infrastructure"):
+    for path in ("/", "/backtester", "/pipeline", "/infrastructure", "/mentions-legales"):
         html = client.get(path).text.lower()
         assert "season" not in html and "saison" not in html
 

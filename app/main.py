@@ -69,3 +69,9 @@ async def pipeline(request: Request):
 @app.get("/infrastructure")
 async def infrastructure(request: Request):
     return render(request, "infrastructure.html", "/infrastructure")
+
+
+@app.get("/mentions-legales")
+async def legal(request: Request):
+    # In French regardless of the site language: LCEN notice for a site run from France.
+    return render(request, "legal.html", "/mentions-legales")

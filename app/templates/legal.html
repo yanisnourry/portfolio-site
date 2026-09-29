@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block lang %}fr{% endblock %}
+{% block title %}Mentions légales · Yanis Nourry{% endblock %}
+{% block description %}Mentions légales du site yn-tech.fr : éditeur, hébergement, données personnelles.{% endblock %}
+
+{% block content %}
+<section class="hero wrap">
+  <h1>Mentions légales</h1>
+  <p class="lede">
+    Informations prévues par la loi n° 2004-575 du 21 juin 2004 pour la confiance
+    dans l'économie numérique (LCEN).
+  </p>
+</section>
+
+<section class="wrap section legal">
+  <h2>Éditeur du site</h2>
+  <dl class="legal-list">
+    <div><dt>Éditeur</dt><dd>Yanis Nourry, particulier</dd></div>
+    <div><dt>Adresse</dt><dd>9 rue du Général Koenig, 78800 Houilles, France</dd></div>
+    <div><dt>Téléphone</dt><dd><a href="tel:+33648671406">06 48 67 14 06</a></dd></div>
+    <div><dt>E-mail</dt><dd><a href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a></dd></div>
+    <div><dt>Directeur de la publication</dt><dd>Yanis Nourry</dd></div>
+  </dl>
+</section>
+
+<section class="wrap section legal">
+  <h2>Hébergement</h2>
+  <p>
+    Le site est <strong>auto-hébergé</strong> : il fonctionne sur un serveur personnel
+    appartenant à l'éditeur, situé à son domicile en France. L'hébergeur est donc
+    l'éditeur lui-même (coordonnées ci-dessus).
+  </p>
+  <p>
+    Le trafic transite par <strong>Cloudflare</strong>, utilisé comme réseau de
+    diffusion et tunnel d'accès (gestion DNS, chiffrement TLS, protection contre les
+    abus) : Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis,
+    <a href="https://www.cloudflare.com">cloudflare.com</a>. Cloudflare n'héberge pas
+    le contenu du site.
+  </p>
+  <p>
+    Nom de domaine enregistré auprès d'OVH SAS, 2 rue Kellermann, 59100 Roubaix, France.
+  </p>
+</section>
+
+<section class="wrap section legal">
+  <h2>Données personnelles et cookies</h2>
+  <p>
+    Le site lui-même ne dépose aucun cookie, n'utilise aucun outil de mesure
+    d'audience, aucune publicité et aucun script ou police chargé depuis un service
+    tiers. Il ne comporte aucun formulaire.
+  </p>
+  <p>
+    Les requêtes passent par Cloudflare, qui traite les adresses IP des visiteurs pour
+    acheminer le trafic et protéger le site, et peut à ce titre déposer des cookies
+    strictement techniques de sécurité. Voir la
+    <a href="https://www.cloudflare.com/fr-fr/privacypolicy/">politique de confidentialité de Cloudflare</a>.
+  </p>
+  <p>
+    Si vous écrivez à l'adresse de contact, votre message et votre adresse e-mail ne
+    servent qu'à vous répondre et ne sont transmis à personne. Conformément au RGPD,
+    vous pouvez demander l'accès, la rectification ou la suppression de vos données à
+    <a href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a>, et
+    introduire une réclamation auprès de la <a href="https://www.cnil.fr">CNIL</a>.
+  </p>
+</section>
+
+<section class="wrap section legal">
+  <h2>Contenus</h2>
+  <p>
+    Les textes et illustrations du site sont la propriété de l'éditeur, sauf mention
+    contraire. Le code source du site et des projets présentés est consultable sur
+    <a href="https://github.com/yanisnourry">GitHub</a>.
+  </p>
+  <p>
+    Les résultats de backtest affichés sont des simulations présentées comme
+    démonstration technique. Ils ne constituent ni un conseil en investissement, ni une
+    recommandation, ni un historique de performance réelle.
+  </p>
+</section>
+{% endblock %}

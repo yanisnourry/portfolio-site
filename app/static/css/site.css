@@ -317,6 +317,24 @@ td.mono { white-space: nowrap; font-size: 0.85rem; }
 .plain li { margin-bottom: 0.6rem; }
 .plain li::marker { color: var(--accent); }
 
+/* Legal */
+
+.legal p { max-width: 44rem; }
+.legal-list { margin: 0; }
+.legal-list div {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.legal-list dt { color: var(--muted); }
+.legal-list dd { margin: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 480px) {
+  .legal-list div { grid-template-columns: 1fr; }
+}
+
 /* Services */
 
 .grid {
