@@ -35,6 +35,7 @@ Environment variables, all optional:
 |---|---|
 | `BACKTESTER_URL` | `http://backtester.backtester.svc.cluster.local:8000` |
 | `BACKTESTER_TIMEOUT_SECONDS` | `2.0` |
+| `CONTACT_EMAIL` | `contact@yn-tech.fr` |
 
 ## Run locally
 
