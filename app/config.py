@@ -12,6 +12,8 @@ class Settings:
     # Short on purpose: a slow backtester must not hold the page.
     backtester_timeout_seconds: float = 2.0
     contact_email: str = "contact@yn-tech.fr"
+    # Canonical origin, used for OpenGraph and canonical URLs.
+    site_url: str = "https://yn-tech.fr"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -21,4 +23,5 @@ class Settings:
                 os.getenv("BACKTESTER_TIMEOUT_SECONDS", cls.backtester_timeout_seconds)
             ),
             contact_email=os.getenv("CONTACT_EMAIL", cls.contact_email),
+            site_url=os.getenv("SITE_URL", cls.site_url).rstrip("/"),
         )
