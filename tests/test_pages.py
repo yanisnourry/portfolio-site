@@ -174,6 +174,42 @@ def test_footer_links_legal_page_everywhere(backtest):
         assert 'href="/mentions-legales"' in client.get(path).text
 
 
+def test_every_sitemap_page_renders(backtest):
+    for path in main.PAGES:
+        assert client.get(path).status_code == 200, path
+
+
+def test_sitemap_lists_every_page_with_absolute_urls():
+    resp = client.get("/sitemap.xml")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/xml")
+    for path in main.PAGES:
+        assert f"<loc>https://yn-tech.fr{path}</loc>" in resp.text
+
+
+def test_robots_points_to_sitemap():
+    resp = client.get("/robots.txt")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/plain")
+    assert "Allow: /" in resp.text
+    assert "Sitemap: https://yn-tech.fr/sitemap.xml" in resp.text
+
+
+def test_og_image_on_every_page(backtest):
+    for path in main.PAGES:
+        html = client.get(path).text
+        assert '<meta property="og:image" content="https://yn-tech.fr/static/img/og.png">' in html
+        assert '<meta name="twitter:card" content="summary_large_image">' in html
+    resp = client.get("/static/img/og.png")
+    assert resp.status_code == 200
+    assert resp.content.startswith(bytes.fromhex("89504e470d0a1a0a"))
+
+
+def test_og_locale(backtest):
+    assert 'content="en_US"' in client.get("/").text
+    assert 'content="fr_FR"' in client.get("/mentions-legales").text
+
+
 def test_no_season_naming(backtest):
     """Internal roadmap vocabulary never reaches public pages."""
     for path in ("/", "/backtester", "/pipeline", "/infrastructure", "/mentions-legales"):

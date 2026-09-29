@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -24,6 +25,9 @@ NAV = [
     ("Infrastructure", "/infrastructure"),
     ("Contact", "/#contact"),
 ]
+
+# Every public page, for the sitemap. A test checks each one actually renders.
+PAGES = ["/", "/pipeline", "/backtester", "/infrastructure", "/mentions-legales"]
 
 # A public site, not an API: no /docs, /redoc or /openapi.json.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -75,3 +79,19 @@ async def infrastructure(request: Request):
 async def legal(request: Request):
     # In French regardless of the site language: LCEN notice for a site run from France.
     return render(request, "legal.html", "/mentions-legales")
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots():
+    return f"User-agent: *\nAllow: /\n\nSitemap: {settings.site_url}/sitemap.xml\n"
+
+
+@app.get("/sitemap.xml")
+async def sitemap():
+    urls = "".join(f"  <url><loc>{settings.site_url}{path}</loc></url>\n" for path in PAGES)
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}</urlset>\n"
+    )
+    return Response(body, media_type="application/xml")

@@ -13,6 +13,12 @@
   <meta property="og:title" content="{{ page_title }}">
   <meta property="og:description" content="{{ page_description }}">
   <meta property="og:url" content="{{ settings.site_url }}{{ page_path }}">
+  <meta property="og:locale" content="{% block og_locale %}en_US{% endblock %}">
+  <meta property="og:image" content="{{ settings.site_url }}/static/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Yanis Nourry, backend Python and DevOps: Python backends, deployed on infrastructure I run myself.">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="color-scheme" content="dark light">
   <link rel="icon" href="{{ url_for('static', path='favicon.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', path='css/site.css') }}">
