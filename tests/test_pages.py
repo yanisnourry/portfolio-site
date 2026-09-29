@@ -210,6 +210,15 @@ def test_og_locale(backtest):
     assert 'content="fr_FR"' in client.get("/mentions-legales").text
 
 
+def test_asset_urls_are_root_relative(backtest):
+    """Behind the TLS-terminating proxy the app sees plain http: an absolute
+    url_for() link would be http:// on an https page and get blocked."""
+    for path in main.PAGES:
+        html = client.get(path).text
+        assert "http://testserver" not in html
+        assert 'href="/static/css/site.css"' in html
+
+
 def test_no_season_naming(backtest):
     """Internal roadmap vocabulary never reaches public pages."""
     for path in ("/", "/backtester", "/pipeline", "/infrastructure", "/mentions-legales"):
