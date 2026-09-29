@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero wrap">
+  <p class="eyebrow">Backend Python · DevOps</p>
+  <h1>Yanis Nourry</h1>
+  <p class="lede">
+    I build Python backends and deploy them on infrastructure I run myself.
+    Professionally I work with Django; the projects below are FastAPI services,
+    a backtesting engine, and the Kubernetes cluster they all run on.
+    Everything shown here is running today, and its source is on GitHub.
+  </p>
+  <p class="availability"><span class="dot" aria-hidden="true"></span>Open to freelance missions and permanent positions.</p>
+  <div class="actions">
+    <a class="button button-primary" href="mailto:{{ settings.contact_email }}">Get in touch</a>
+    <a class="button" href="#projects">See the projects</a>
+  </div>
+</section>
+
+<section id="projects" class="wrap section">
+  <h2>What's running</h2>
+
+  <article class="card">
+    <header class="card-head">
+      <h3>Market Data Pipeline</h3>
+      <span class="status status-ok">In production</span>
+    </header>
+    <p>
+      Async ingestion of OHLCV candles from Binance into TimescaleDB, served by a
+      FastAPI REST and WebSocket API, with a Streamlit dashboard on top. Anomalies
+      (gaps, outliers, inconsistent candles) are flagged, never silently dropped,
+      and every write is an idempotent upsert.
+    </p>
+    <ul class="tags">
+      <li>FastAPI</li><li>asyncio</li><li>TimescaleDB</li><li>Redis</li><li>Streamlit</li>
+    </ul>
+    <p class="links">
+      <a href="https://api.yn-tech.fr/docs">API docs ↗</a>
+      <a href="https://dashboard.yn-tech.fr">Dashboard ↗</a>
+      <a href="https://github.com/yanisnourry/market-data-pipeline">Source ↗</a>
+    </p>
+  </article>
+
+  <article class="card">
+    <header class="card-head">
+      <h3>Vectorized Backtester</h3>
+      <span class="status status-ok">Engine + live demo</span>
+    </header>
+    <p>
+      An engine that measures a strategy honestly: the position on each bar comes
+      from the previous bar's signal, so no decision sees its own close, and every
+      position change pays fees and slippage. There is one demo strategy, a plain
+      SMA crossover: a test vehicle for the engine, not an edge. A small service
+      re-runs it every hour on the pipeline's latest data.
+    </p>
+
+    {% set r = backtest.results %}
+    <figure class="live">
+      <figcaption class="live-head">
+        {% if not backtest.live %}
+          <span class="status status-warn">Example</span>
+          <span class="muted">Live service temporarily unavailable, showing a static example.</span>
+        {% elif r.stale %}
+          <span class="status status-warn">Live · delayed</span>
+          <span class="muted">Last successful refresh {{ r.computed_at | utc }}.</span>
+        {% else %}
+          <span class="status status-ok">Live</span>
+          <span class="muted">Computed {{ r.computed_at | utc }}.</span>
+        {% endif %}
+      </figcaption>
+      <p class="live-title mono">{{ r.data.symbol }} · {{ r.data.timeframe }} · last {{ r.data.bars }} bars · SMA {{ r.strategy.fast }}/{{ r.strategy.slow }}</p>
+      {% if sparkline %}
+      <svg class="sparkline" viewBox="0 0 600 120" preserveAspectRatio="none" role="img"
+           aria-label="Simulated equity curve, total return {{ r.metrics.total_return | pct }}">
+        <polyline points="{{ sparkline }}" />
+      </svg>
+      {% endif %}
+      <dl class="metrics mono">
+        <div><dt>Total return</dt><dd>{{ r.metrics.total_return | pct }}</dd></div>
+        <div><dt>Max drawdown</dt><dd>{{ r.metrics.max_drawdown | pct }}</dd></div>
+        <div><dt>Sharpe</dt><dd>{{ r.metrics.sharpe_ratio | num }}</dd></div>
+      </dl>
+      <p class="disclaimer">{{ r.disclaimer }}</p>
+    </figure>
+
+    <ul class="tags">
+      <li>pandas</li><li>NumPy</li><li>FastAPI</li><li>pytest</li>
+    </ul>
+    <p class="links">
+      <a href="https://github.com/yanisnourry/vectorized-backtester">Engine source ↗</a>
+      <a href="https://github.com/yanisnourry/backtester-service">Service source ↗</a>
+    </p>
+  </article>
+
+  <article class="card">
+    <header class="card-head">
+      <h3>Infrastructure</h3>
+      <span class="status status-ok">Self-hosted k3s</span>
+    </header>
+    <p>
+      A single-node k3s cluster on a mini PC. Traffic comes in through a
+      Cloudflare Tunnel, so no inbound port is open on the machine, and Traefik
+      routes it from there. Each service ships as a Helm chart pinning an image
+      that CI built and pushed to GHCR, by commit sha. The host is locked down
+      with ufw on IPv4 and IPv6 and unattended security upgrades. This site runs
+      there too.
+    </p>
+    <ul class="tags">
+      <li>k3s</li><li>Helm</li><li>Traefik</li><li>Cloudflare Tunnel</li><li>GitHub Actions</li>
+    </ul>
+    <p class="links">
+      <a href="https://github.com/yanisnourry/infra">Source ↗</a>
+    </p>
+  </article>
+</section>
+
+<section id="services" class="wrap section">
+  <h2>What I can do for you</h2>
+  <div class="grid">
+    <div class="service">
+      <h3>Backend APIs</h3>
+      <p>Python APIs with FastAPI or Django: data models, async I/O, background jobs, tests and documentation.</p>
+    </div>
+    <div class="service">
+      <h3>Data pipelines</h3>
+      <p>Ingestion from external APIs, validation that flags bad data instead of hiding it, time-series storage.</p>
+    </div>
+    <div class="service">
+      <h3>Deployment &amp; infrastructure</h3>
+      <p>Containerising an existing app, CI/CD to a registry, Kubernetes deployments with Helm, hardened self-hosting.</p>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="wrap section">
+  <h2>Contact</h2>
+  <p>Email is the simplest way to reach me. Tell me about the project or the role, and I'll get back to you.</p>
+  <p><a class="button button-primary mono" href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a></p>
+</section>
+{% endblock %}
