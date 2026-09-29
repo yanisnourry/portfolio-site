@@ -123,9 +123,27 @@ def test_backtester_page_never_leaks_internal_url(backtest):
     assert "svc.cluster.local" not in client.get("/backtester").text
 
 
+def test_pipeline_page():
+    resp = client.get("/pipeline")
+    assert resp.status_code == 200
+    html = resp.text
+    assert 'href="/pipeline" aria-current="page"' in html
+    assert "https://api.yn-tech.fr/docs" in html
+    assert "/static/img/pipeline-dashboard.jpg" in html
+    assert client.get("/static/img/pipeline-dashboard.jpg").status_code == 200
+
+
+def test_pipeline_page_does_not_call_backtester(monkeypatch):
+    async def boom(settings):
+        raise AssertionError("the pipeline page must not call the backtester")
+
+    monkeypatch.setattr(main, "fetch_results", boom)
+    assert client.get("/pipeline").status_code == 200
+
+
 def test_no_season_naming(backtest):
     """Internal roadmap vocabulary never reaches public pages."""
-    for path in ("/", "/backtester"):
+    for path in ("/", "/backtester", "/pipeline"):
         html = client.get(path).text.lower()
         assert "season" not in html and "saison" not in html
 

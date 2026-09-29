@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Market Data Pipeline: async ingestion, TimescaleDB, FastAPI · Yanis Nourry{% endblock %}
+{% block description %}An async pipeline that ingests Binance OHLCV candles into TimescaleDB, flags bad data instead of dropping it, and serves it over a FastAPI REST and WebSocket API. Running on Kubernetes.{% endblock %}
+
+{% block content %}
+<section class="hero wrap">
+  <p class="eyebrow">Python · asyncio · TimescaleDB · FastAPI</p>
+  <h1>Market Data Pipeline</h1>
+  <p class="lede">
+    Fetches OHLCV candles from Binance, validates them, stores them in
+    TimescaleDB and serves them over a FastAPI REST and WebSocket API, with a
+    Streamlit dashboard on top. It runs around the clock on my Kubernetes
+    cluster and is the data source for the <a href="/backtester">backtester's live demo</a>.
+  </p>
+  <p class="availability"><span class="dot" aria-hidden="true"></span>In production: 3 symbols × 5 timeframes, refreshed continuously.</p>
+  <div class="actions">
+    <a class="button button-primary" href="https://api.yn-tech.fr/docs">API docs ↗</a>
+    <a class="button" href="https://dashboard.yn-tech.fr">Dashboard ↗</a>
+    <a class="button" href="https://github.com/yanisnourry/market-data-pipeline">Source ↗</a>
+  </div>
+</section>
+
+<section class="wrap section">
+  <figure class="shot">
+    <img src="{{ url_for('static', path='img/pipeline-dashboard.jpg') }}" width="1568" height="699"
+         alt="Streamlit dashboard showing a BTCUSDT 1h candlestick chart over two weeks" loading="lazy">
+    <figcaption>The Streamlit dashboard: BTCUSDT, 1h candles (screenshot from August 2026).</figcaption>
+  </figure>
+</section>
+
+<section class="wrap section">
+  <h2>Data flow</h2>
+  <ol class="steps mono" aria-label="Data flow">
+    <li><span>Binance</span><small>/api/v3/klines</small></li>
+    <li><span>Fetcher</span><small>async, paginated</small></li>
+    <li><span>Normalizer</span><small>→ typed Candle</small></li>
+    <li><span>Validator</span><small>flags anomalies</small></li>
+    <li><span>Repository</span><small>upsert</small></li>
+    <li><span>TimescaleDB + Redis</span><small>history + last price</small></li>
+    <li><span>FastAPI</span><small>REST + WebSocket</small></li>
+  </ol>
+  <p>
+    One scheduled job per timeframe (<span class="mono">1m, 5m, 15m, 1h, 1d</span>) for
+    <span class="mono">BTCUSDT</span>, <span class="mono">ETHUSDT</span> and
+    <span class="mono">BTCUSDC</span>. Jobs are independent: a failure in the 1m job
+    doesn't touch the 1h one.
+  </p>
+</section>
+
+<section class="wrap section">
+  <h2>Design decisions</h2>
+  <div class="grid grid-2">
+    <div class="service">
+      <h3>Idempotent, self-correcting writes</h3>
+      <p>
+        Every write is an upsert on <code>(timestamp, symbol, exchange, timeframe)</code>.
+        A row is only rewritten when a price or the volume actually differs
+        (<code>IS DISTINCT FROM</code>), so re-running a range is a no-op, and the
+        still-open candle Binance returns gets its final values on the next fetch.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Flag bad data, never drop it</h3>
+      <p>
+        Gaps, price jumps over 20%, volume spikes over 10× the 24-candle mean and
+        physically impossible candles are flagged, not removed. Whether to exclude
+        them is the consumer's decision. The counts are exposed on
+        <code>/health/data-quality</code>.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Resume, don't restart</h3>
+      <p>
+        Each job resumes from the latest stored candle. An empty series is backfilled
+        over a horizon sized to about 10,000 candles (7 days of 1m, a year of 1h,
+        five years of 1d), and that same horizon bounds how far a job reaches back
+        after a long outage.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Exact numbers, explicit time</h3>
+      <p>
+        Prices are <code>NUMERIC(20, 8)</code> in the database and <code>Decimal</code>
+        in Python, never floats. Timestamps are <code>TIMESTAMPTZ</code>, always UTC,
+        so a server locale change can't shift the data.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Async end to end, with limits</h3>
+      <p>
+        aiohttp, asyncpg and redis.asyncio keep the event loop free. Binance calls are
+        capped at 10 concurrent requests, with exponential backoff (1s, 2s, 4s) on
+        failure. WebSocket connections are capped too.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Fail fast at startup</h3>
+      <p>
+        The API checks its database and Redis before accepting traffic. If either is
+        missing, the process exits with a clear error instead of serving in a
+        half-working state.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2>API</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Returns</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">GET</td><td class="mono">/health</td><td>Service status (database + Redis)</td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/health/data-quality</td><td>Anomaly counts: gaps, outliers, inconsistencies</td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/symbols</td><td>Available trading pairs</td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/timeframes</td><td>Configured timeframes</td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/ohlcv/{symbol}/{timeframe}</td><td>Historical candles, filtered by <code>start</code>/<code>end</code>, paginated</td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/ohlcv/{symbol}/{timeframe}/latest</td><td>Latest candle</td></tr>
+        <tr><td class="mono">WS</td><td class="mono">/ws/prices</td><td>Last price per symbol, streamed every second</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The interactive documentation is public: <a href="https://api.yn-tech.fr/docs">api.yn-tech.fr/docs ↗</a>.</p>
+</section>
+
+<section class="wrap section">
+  <h2>In production</h2>
+  <ul class="plain">
+    <li><strong>Packaged as a Helm chart</strong> in a separate infrastructure repository: API, dashboard, Redis, TimescaleDB and a one-off Job that creates the schema.</li>
+    <li><strong>State lives in one place.</strong> TimescaleDB runs as a StatefulSet on a persistent volume; everything else can be deleted and recreated.</li>
+    <li><strong>Image pinned by commit sha</strong>, built and pushed to GHCR by CI, never <code>latest</code>.</li>
+    <li><strong>No credentials in the repositories.</strong> They are public; the database password lives in a Kubernetes Secret created by hand.</li>
+    <li><strong>Rate-limited at the edge.</strong> The public API and dashboard go through Traefik middlewares that cap both the request rate and the number of concurrent requests per client IP, read from Cloudflare's <code>Cf-Connecting-IP</code> header.</li>
+  </ul>
+</section>
+
+<section class="wrap section">
+  <h2>Tests and CI</h2>
+  <p>
+    53 tests covering the fetcher, normaliser, validator, repository, scheduler
+    jobs, API and WebSocket. CI runs them against real TimescaleDB and Redis
+    service containers, then builds the image and pushes it to GHCR.
+  </p>
+</section>
+
+<section class="wrap section">
+  <h2>Known limitations</h2>
+  <ul class="plain">
+    <li>Anomaly flags are set on first insert and not recomputed when a later fetch corrects a candle: re-validating needs the neighbouring candles, which the upsert doesn't have. An accepted trade-off that keeps ingestion and validation decoupled.</li>
+    <li>A gap older than the backfill horizon is logged, not recovered.</li>
+    <li>A single source (Binance spot).</li>
+  </ul>
+</section>
+{% endblock %}

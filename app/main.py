@@ -19,7 +19,7 @@ settings = Settings.from_env()
 
 # (label, href): pages get their own entry as they are written.
 NAV = [
-    ("Projects", "/#projects"),
+    ("Pipeline", "/pipeline"),
     ("Backtester", "/backtester"),
     ("Contact", "/#contact"),
 ]
@@ -58,3 +58,8 @@ async def home(request: Request):
 @app.get("/backtester")
 async def backtester(request: Request):
     return render(request, "backtester.html", "/backtester", **await backtest_context())
+
+
+@app.get("/pipeline")
+async def pipeline(request: Request):
+    return render(request, "pipeline.html", "/pipeline")
