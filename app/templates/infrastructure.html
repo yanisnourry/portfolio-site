@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Infrastructure: self-hosted k3s behind a Cloudflare Tunnel · Yanis Nourry{% endblock %}
+{% block description %}A single-node k3s cluster on a mini PC at home, reached only through an outbound Cloudflare Tunnel. Helm charts, images pinned by commit sha, a firewall checked from outside, and the limits stated plainly.{% endblock %}
+
+{% block content %}
+<section class="hero wrap">
+  <p class="eyebrow">k3s · Helm · Traefik · Cloudflare Tunnel</p>
+  <h1>Infrastructure</h1>
+  <p class="lede">
+    Everything on this site runs on one mini PC at home: a single-node k3s
+    cluster that the internet can only reach through an outbound Cloudflare
+    Tunnel. No port is open to the internet, on the machine or the router. The Helm charts and
+    manifests are public.
+  </p>
+  <div class="actions">
+    <a class="button button-primary" href="https://github.com/yanisnourry/infra">Source ↗</a>
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2>How a request gets here</h2>
+  <ol class="steps mono" aria-label="Request path">
+    <li><span>Visitor</span><small>HTTPS</small></li>
+    <li><span>Cloudflare</span><small>DNS, TLS</small></li>
+    <li><span>Tunnel</span><small>outbound, 2 connectors</small></li>
+    <li><span>Traefik</span><small>rate limits</small></li>
+    <li><span>Ingress</span><small>routes by host</small></li>
+    <li><span>Service → Pod</span><small>ClusterIP</small></li>
+  </ol>
+  <p>
+    <span class="mono">cloudflared</span> runs inside the cluster as two replicas of
+    the same tunnel. Each one dials <em>out</em> to Cloudflare, so nothing listens for
+    inbound connections and the home IP address never appears in DNS. Cloudflare
+    terminates TLS and forwards each public hostname to Traefik, which routes on the
+    Host header. Two connectors mean a rolling update or a crashed pod doesn't cut
+    public traffic. The tunnel's routing is a versioned ConfigMap, not settings in a
+    dashboard.
+  </p>
+</section>
+
+<section class="wrap section">
+  <h2>What runs on the cluster</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Namespace</th><th>Workloads</th><th>Reachable from</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">pipeline</td><td>API, dashboard, TimescaleDB, Redis, schema Job</td><td>API and dashboard: internet, via the tunnel. Database and cache: cluster only.</td></tr>
+        <tr><td class="mono">backtester</td><td>Backtester service</td><td>Cluster only: this site calls it server-side.</td></tr>
+        <tr><td class="mono">cloudflared</td><td>Tunnel connectors ×2</td><td>Outbound only.</td></tr>
+        <tr><td class="mono">site</td><td>This website</td><td>Internet, via the tunnel.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2>Locking down a server on a home connection</h2>
+  <div class="grid grid-2">
+    <div class="service">
+      <h3>Firewall, IPv6 included</h3>
+      <p>
+        The machine has a global IPv6 address, and IPv6 means no NAT to hide behind.
+        ufw covers IPv4 and IPv6, the router's IPv6 firewall is on, and an external
+        IPv6 scan confirmed that SSH (22), the Kubernetes API (6443), the kubelet
+        (10250), 80 and 443 are all unreachable from the internet.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Rate limits per real visitor</h3>
+      <p>
+        Behind the tunnel every request comes from <span class="mono">cloudflared</span>, so
+        a naive limit would give all visitors one shared quota. Traefik middlewares
+        key the request rate and the concurrent-request cap on Cloudflare's
+        <code>Cf-Connecting-IP</code> header instead.
+      </p>
+    </div>
+    <div class="service">
+      <h3>No secret in a public repo</h3>
+      <p>
+        The repositories are public. The database password and the tunnel credentials
+        live in Kubernetes Secrets created by hand. Secret manifests and credential
+        files are git-ignored, and only an example file is committed.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Least privilege in the pods</h3>
+      <p>
+        The tunnel and the backtester run as a non-root user, with a read-only root
+        filesystem, every Linux capability dropped and privilege escalation off. The
+        backtester also gets the default seccomp profile and no service account token.
+        Databases and internal services are <code>ClusterIP</code> only.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Patched without waiting for me</h3>
+      <p>
+        The host runs Ubuntu Server with <span class="mono">unattended-upgrades</span>: a
+        machine exposed around the clock has to stay patched even when nobody is
+        looking at it.
+      </p>
+    </div>
+    <div class="service">
+      <h3>Images pinned by commit sha</h3>
+      <p>
+        Application images are pinned to the commit sha CI built, never
+        <code>latest</code>, so what runs is exactly what was reviewed. TimescaleDB
+        and cloudflared are pinned to an exact release.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2>From a commit to the cluster</h2>
+  <ol class="steps mono" aria-label="Delivery pipeline">
+    <li><span>git push</span><small>application repo</small></li>
+    <li><span>CI tests</span><small>GitHub Actions</small></li>
+    <li><span>Build + push</span><small>GHCR, tagged by sha</small></li>
+    <li><span>Bump the sha</span><small>commit in infra</small></li>
+    <li><span>helm upgrade</span><small>on the cluster</small></li>
+  </ol>
+  <p>
+    Each application builds its own image. The infrastructure repository decides which
+    sha runs, in one place per chart, so a deployment is a reviewed commit and a
+    rollback is the previous sha. The last step is still manual: see the limitations below.
+  </p>
+</section>
+
+<section class="wrap section">
+  <h2>Kubernetes choices</h2>
+  <ul class="plain">
+    <li><strong>One replica where state lives in the process.</strong> The pipeline API runs the ingestion scheduler and the backtester keeps its result in memory. Both are pinned to one replica with a <code>Recreate</code> strategy, so a rollout never runs two copies side by side.</li>
+    <li><strong>Liveness never depends on a dependency.</strong> A database outage should make a pod not ready, not restart it in a loop: liveness checks the process itself, readiness checks the dependencies.</li>
+    <li><strong>State in exactly one place.</strong> TimescaleDB is a StatefulSet on a persistent volume, with guaranteed CPU and memory. Everything else can be deleted and recreated.</li>
+    <li><strong>No start order, so wait explicitly.</strong> Kubernetes has no <code>depends_on</code>: the API and the schema Job wait for the database with an init container, and the schema Job is an idempotent Helm hook.</li>
+    <li><strong>Config changes roll the pod.</strong> Environment variables are only read at start, so the backtester chart hashes its ConfigMap into a pod annotation: changing the config triggers a rollout on its own.</li>
+  </ul>
+</section>
+
+<section class="wrap section">
+  <h2>Known limitations</h2>
+  <ul class="plain">
+    <li><strong>One node.</strong> A hardware failure or a power cut takes everything down. No high availability, by design and by budget.</li>
+    <li><strong>No off-machine database backup yet.</strong> Recent history can be re-ingested from Binance, but that is partial recovery, not a backup.</li>
+    <li><strong>No monitoring stack.</strong> No Prometheus or alerting yet: an outage is noticed, not reported.</li>
+    <li><strong>Deploys are run by hand.</strong> <code>helm upgrade</code> from a reviewed commit, not GitOps. No Terraform either: there is no cloud resource to provision.</li>
+  </ul>
+</section>
+{% endblock %}

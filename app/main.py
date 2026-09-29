@@ -21,6 +21,7 @@ settings = Settings.from_env()
 NAV = [
     ("Pipeline", "/pipeline"),
     ("Backtester", "/backtester"),
+    ("Infrastructure", "/infrastructure"),
     ("Contact", "/#contact"),
 ]
 
@@ -63,3 +64,8 @@ async def backtester(request: Request):
 @app.get("/pipeline")
 async def pipeline(request: Request):
     return render(request, "pipeline.html", "/pipeline")
+
+
+@app.get("/infrastructure")
+async def infrastructure(request: Request):
+    return render(request, "infrastructure.html", "/infrastructure")

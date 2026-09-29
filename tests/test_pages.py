@@ -141,9 +141,21 @@ def test_pipeline_page_does_not_call_backtester(monkeypatch):
     assert client.get("/pipeline").status_code == 200
 
 
+def test_infrastructure_page():
+    resp = client.get("/infrastructure")
+    assert resp.status_code == 200
+    assert 'href="/infrastructure" aria-current="page"' in resp.text
+    assert "https://github.com/yanisnourry/infra" in resp.text
+
+
+def test_infrastructure_page_never_claims_dnssec():
+    """DNSSEC is not enabled on the zone (no DS record in .fr): never claim it."""
+    assert "dnssec" not in client.get("/infrastructure").text.lower()
+
+
 def test_no_season_naming(backtest):
     """Internal roadmap vocabulary never reaches public pages."""
-    for path in ("/", "/backtester", "/pipeline"):
+    for path in ("/", "/backtester", "/pipeline", "/infrastructure"):
         html = client.get(path).text.lower()
         assert "season" not in html and "saison" not in html
 
