@@ -22,9 +22,9 @@
     <div class="wrap header-inner">
       <a class="brand" href="/">yn<span class="brand-dot">.</span>tech</a>
       <nav aria-label="Main">
-        <a href="/#projects">Projects</a>
-        <a href="/#services">Services</a>
-        <a href="/#contact">Contact</a>
+        {% for label, href in nav %}
+        <a href="{{ href }}"{% if href == page_path %} aria-current="page"{% endif %}>{{ label }}</a>
+        {% endfor %}
       </nav>
     </div>
   </header>
