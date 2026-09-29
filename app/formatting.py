@@ -18,3 +18,9 @@ def utc(value: str | None) -> str:
     if not value:
         return "n/a"
     return datetime.fromisoformat(value).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def day(value: str | None) -> str:
+    if not value:
+        return "n/a"
+    return datetime.fromisoformat(value).strftime("%Y-%m-%d")
