@@ -13,12 +13,12 @@
       <span class="muted">Computed {{ r.computed_at | utc }}.</span>
     {% endif %}
   </figcaption>
-  <p class="live-title mono">{{ r.data.symbol }} · {{ r.data.timeframe }} · last {{ r.data.bars }} bars · SMA {{ r.strategy.fast }}/{{ r.strategy.slow }}</p>
+  <p class="live-title">{{ r.data.symbol }} · {{ r.data.timeframe }} · last {{ r.data.bars }} bars · SMA {{ r.strategy.fast }}/{{ r.strategy.slow }}</p>
 
   {% if chart.points %}
     {% if full %}
     <div class="chart">
-      <div class="chart-y mono" aria-hidden="true">
+      <div class="chart-y" aria-hidden="true">
         <span>{{ chart.hi | num }}</span>
         <span>{{ chart.lo | num }}</span>
       </div>
@@ -29,7 +29,7 @@
         {% endif %}
         <polyline points="{{ chart.points }}" />
       </svg>
-      <div class="chart-x mono" aria-hidden="true">
+      <div class="chart-x" aria-hidden="true">
         <span>{{ r.data.start | day }}</span>
         <span>{{ r.data.end | day }}</span>
       </div>
@@ -43,7 +43,7 @@
     {% endif %}
   {% endif %}
 
-  <dl class="metrics mono">
+  <dl class="metrics">
     <div><dt>Total return</dt><dd>{{ r.metrics.total_return | pct }}</dd></div>
     <div><dt>Max drawdown</dt><dd>{{ r.metrics.max_drawdown | pct }}</dd></div>
     <div><dt>Sharpe (annualized)</dt><dd>{{ r.metrics.sharpe_ratio | num }}</dd></div>

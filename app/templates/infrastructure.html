@@ -20,7 +20,7 @@
 
 <section class="wrap section">
   <h2>How a request gets here</h2>
-  <ol class="steps mono" aria-label="Request path">
+  <ol class="steps" aria-label="Request path">
     <li><span>Visitor</span><small>HTTPS</small></li>
     <li><span>Cloudflare</span><small>DNS, TLS</small></li>
     <li><span>Tunnel</span><small>outbound, 2 connectors</small></li>
@@ -113,7 +113,7 @@
 
 <section class="wrap section">
   <h2>From a commit to the cluster</h2>
-  <ol class="steps mono" aria-label="Delivery pipeline">
+  <ol class="steps" aria-label="Delivery pipeline">
     <li><span>git push</span><small>application repo</small></li>
     <li><span>CI tests</span><small>GitHub Actions</small></li>
     <li><span>Build + push</span><small>GHCR, tagged by sha</small></li>
