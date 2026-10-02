@@ -1,6 +1,7 @@
 """FastAPI app: server-rendered pages."""
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +36,15 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 templates.env.filters.update(pct=pct, num=num, utc=utc, day=day)
-templates.env.globals.update(settings=settings, nav=NAV)
+
+
+def asset(path: str) -> str:
+    """URL of a static file, versioned by its content so browsers never serve a stale copy."""
+    digest = hashlib.sha256((BASE_DIR / "static" / path).read_bytes()).hexdigest()[:10]
+    return f"/static/{path}?v={digest}"
+
+
+templates.env.globals.update(settings=settings, nav=NAV, asset=asset)
 
 
 def render(request: Request, template: str, page_path: str, **context: Any):

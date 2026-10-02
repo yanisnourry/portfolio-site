@@ -216,7 +216,14 @@ def test_asset_urls_are_root_relative(backtest):
     for path in main.PAGES:
         html = client.get(path).text
         assert "http://testserver" not in html
-        assert 'href="/static/css/site.css"' in html
+        assert 'href="/static/css/site.css?v=' in html
+
+
+def test_stylesheet_url_changes_with_content():
+    """The ?v= hash busts browser caches whenever site.css is edited."""
+    url = main.asset("css/site.css")
+    assert url.startswith("/static/css/site.css?v=")
+    assert client.get(url).status_code == 200
 
 
 def test_no_season_naming(backtest):
