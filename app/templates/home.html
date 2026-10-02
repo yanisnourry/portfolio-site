@@ -5,10 +5,21 @@
   <p class="eyebrow">Backend Python · DevOps</p>
   <h1>Yanis Nourry</h1>
   <p class="lede">
-    I build Python backends and deploy them on infrastructure I run myself.
-    Professionally I work with Django; the projects below are FastAPI services,
-    a backtesting engine, and the Kubernetes cluster they all run on.
-    Everything shown here is running today, and its source is on GitHub.
+    I'm a backend Python developer. For five years I've built production APIs
+    with Django and FastAPI, and I take them all the way to production:
+    containers, CI/CD, Kubernetes.
+  </p>
+  <p class="lede">
+    To show what that looks like in practice, I built a backtesting project end
+    to end: a pipeline that ingests market data, an engine that tests a trading
+    strategy without cheating on costs or look-ahead, and a service that re-runs
+    it every hour, all deployed on a Kubernetes cluster I set up myself.
+    Everything below is running today, and its source is on
+    {% if settings.github_url %}<a href="{{ settings.github_url }}">GitHub</a>{% else %}GitHub{% endif %}.
+  </p>
+  <p class="lede">
+    My full background is in my <a href="/cv">CV</a>{% if settings.linkedin_url %}
+    and on <a href="{{ settings.linkedin_url }}">LinkedIn</a>{% endif %}.
   </p>
   <p class="availability"><span class="dot" aria-hidden="true"></span>Open to freelance missions and permanent positions.</p>
   <div class="actions">

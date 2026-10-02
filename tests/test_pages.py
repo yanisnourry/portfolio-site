@@ -169,6 +169,34 @@ def test_other_pages_stay_in_english(backtest):
         assert '<html lang="en">' in client.get(path).text
 
 
+def test_cv_page_embeds_and_serves_the_pdf():
+    html = client.get("/cv").text
+    assert html.count(main.asset(main.CV_FILE)) >= 2  # download button + embed
+    pdf = client.get(main.asset(main.CV_FILE))
+    assert pdf.status_code == 200
+    assert pdf.content.startswith(b"%PDF")
+
+
+def test_home_links_cv(backtest):
+    assert 'href="/cv"' in client.get("/").text
+
+
+def test_profile_links_on_home_and_cv(backtest):
+    for path in ("/", "/cv"):
+        html = client.get(path).text
+        assert f'href="{main.settings.linkedin_url}"' in html
+        assert f'href="{main.settings.github_url}"' in html
+
+
+def test_profile_links_hidden_when_unset(backtest, monkeypatch):
+    monkeypatch.setitem(main.templates.env.globals, "settings",
+                        main.Settings(linkedin_url="", github_url=""))
+    for path in ("/", "/cv"):
+        html = client.get(path).text
+        assert "linkedin.com" not in html
+        assert 'href=""' not in html
+
+
 def test_footer_links_legal_page_everywhere(backtest):
     for path in ("/", "/pipeline", "/backtester", "/infrastructure", "/mentions-legales"):
         assert 'href="/mentions-legales"' in client.get(path).text

@@ -24,11 +24,14 @@ NAV = [
     ("Pipeline", "/pipeline"),
     ("Backtester", "/backtester"),
     ("Infrastructure", "/infrastructure"),
+    ("CV", "/cv"),
     ("Contact", "/#contact"),
 ]
 
 # Every public page, for the sitemap. A test checks each one actually renders.
-PAGES = ["/", "/pipeline", "/backtester", "/infrastructure", "/mentions-legales"]
+PAGES = ["/", "/pipeline", "/backtester", "/infrastructure", "/cv", "/mentions-legales"]
+
+CV_FILE = "docs/CV_Yanis_NOURRY_Dev_Python.pdf"
 
 # A public site, not an API: no /docs, /redoc or /openapi.json.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -44,7 +47,7 @@ def asset(path: str) -> str:
     return f"/static/{path}?v={digest}"
 
 
-templates.env.globals.update(settings=settings, nav=NAV, asset=asset)
+templates.env.globals.update(settings=settings, nav=NAV, asset=asset, cv_url=asset(CV_FILE))
 
 
 def render(request: Request, template: str, page_path: str, **context: Any):
@@ -82,6 +85,11 @@ async def pipeline(request: Request):
 @app.get("/infrastructure")
 async def infrastructure(request: Request):
     return render(request, "infrastructure.html", "/infrastructure")
+
+
+@app.get("/cv")
+async def cv(request: Request):
+    return render(request, "cv.html", "/cv")
 
 
 @app.get("/mentions-legales")

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}CV · Yanis Nourry{% endblock %}
+{% block description %}CV of Yanis Nourry, backend Python developer (Django, FastAPI) with a DevOps background: Docker, Kubernetes, CI/CD.{% endblock %}
+
+{% block content %}
+<section class="hero wrap">
+  <p class="eyebrow">Curriculum vitae</p>
+  <h1>CV</h1>
+  <p class="lede">
+    Backend Python developer, five years on production APIs with Django and
+    FastAPI, deployed on Kubernetes. The CV is in French.
+  </p>
+  <div class="actions">
+    <a class="button button-primary" href="{{ cv_url }}" download>Download the PDF</a>
+    {% if settings.linkedin_url %}<a class="button" href="{{ settings.linkedin_url }}">LinkedIn ↗</a>{% endif %}
+    {% if settings.github_url %}<a class="button" href="{{ settings.github_url }}">GitHub ↗</a>{% endif %}
+  </div>
+</section>
+
+<section class="wrap section">
+  <object class="cv-embed" data="{{ cv_url }}" type="application/pdf" aria-label="CV (PDF)">
+    <p>
+      Your browser can't display the PDF here.
+      <a href="{{ cv_url }}">Open the CV</a> instead.
+    </p>
+  </object>
+</section>
+{% endblock %}
